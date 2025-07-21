@@ -1,0 +1,9 @@
+{
+  "SERVER_ADDRESS": "localhost:8080",
+  "TOKEN_SECRET_STING": "~_^",
+  "DEFAULT_REQUEST_TIMEOUT": 15,
+  "PUBLIC_CERT_FILE": "snakeoil.PEM",
+  "PRIVATE_CERT_FILE": "snakeoil-private.PEM",
+  "TRUSTED_SUBNET": "",
+  "ENABLE_HTTPS": false
+}
