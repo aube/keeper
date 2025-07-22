@@ -15,7 +15,7 @@ type FileRepository interface {
 	Save(ctx context.Context, filename string, data io.Reader) error
 	FindAll(ctx context.Context) (*entities.Files, error)
 	Delete(ctx context.Context, uuid string) error
-	GetFileContent(ctx context.Context, uuid string) (io.ReadCloser, error)
+	GetFileContent(ctx context.Context, uuid string) (string, error)
 	EncryptFile(inputPath, outputName, password string) error
 }
 

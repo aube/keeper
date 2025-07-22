@@ -9,14 +9,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 
 	"github.com/aube/keeper/internal/client/entities"
 	"github.com/aube/keeper/internal/client/utils/apperrors"
 	"github.com/aube/keeper/internal/client/utils/logger"
+	"github.com/aube/keeper/internal/client/utils/progress"
 	"github.com/rs/zerolog"
-	progressbar "github.com/schollz/progressbar/v3"
 )
 
 const (
@@ -80,7 +79,7 @@ func (r *FileSystemRepository) Delete(ctx context.Context, filename string) erro
 	return nil
 }
 
-func (r *FileSystemRepository) GetFileContent(ctx context.Context, filename string) (io.ReadCloser, error) {
+func (r *FileSystemRepository) GetFile(ctx context.Context, filename string) (io.ReadCloser, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -92,6 +91,23 @@ func (r *FileSystemRepository) GetFileContent(ctx context.Context, filename stri
 	}
 
 	return os.Open(filePath)
+}
+
+func (r *FileSystemRepository) GetFileContent(ctx context.Context, filename string) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	file, err := r.GetFile(ctx, filename)
+	if err != nil {
+		return "", err
+	}
+
+	bodyBytes, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bodyBytes), nil
 }
 
 func (r *FileSystemRepository) FindAll(ctx context.Context) (*entities.Files, error) {
@@ -126,85 +142,12 @@ func (r *FileSystemRepository) FindAll(ctx context.Context) (*entities.Files, er
 }
 
 func (r *FileSystemRepository) EncryptFile(inputPath, outputName, password string) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	outputPath := r.GetPath(outputName)
-
-	// Открываем исходный файл
-	inputFile, err := os.Open(inputPath)
-	if err != nil {
-		return fmt.Errorf("не удалось открыть входной файл: %w", err)
-	}
-	defer inputFile.Close()
-
-	// Создаем выходной файл
-	outputFile, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("не удалось создать выходной файл: %w", err)
-	}
-	defer outputFile.Close()
-
-	// Генерируем ключ из пароля
-	key := deriveKey(password)
-
-	// Инициализируем шифр
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return fmt.Errorf("ошибка создания блока шифра: %w", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return fmt.Errorf("ошибка создания GCM: %w", err)
-	}
-
-	// Генерируем уникальный nonce
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return fmt.Errorf("ошибка генерации nonce: %w", err)
-	}
-
-	// Записываем nonce в начало выходного файла
-	if _, err := outputFile.Write(nonce); err != nil {
-		return fmt.Errorf("ошибка записи nonce: %w", err)
-	}
-
-	// Буфер для чтения данных
-	buf := make([]byte, chunkSize)
-	stream := cipher.NewCTR(block, nonce)
-
-	for {
-		// Читаем порцию данных из файла
-		n, err := inputFile.Read(buf)
-		if err != nil && err != io.EOF {
-			return fmt.Errorf("ошибка чтения файла: %w", err)
-		}
-
-		if n == 0 {
-			break
-		}
-
-		// Шифруем данные
-		ciphertext := make([]byte, n)
-		stream.XORKeyStream(ciphertext, buf[:n])
-
-		// Записываем зашифрованные данные
-		if _, err := outputFile.Write(ciphertext); err != nil {
-			return fmt.Errorf("ошибка записи зашифрованных данных: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (r *FileSystemRepository) EncryptFileBar(inputPath, outputName, password string) error {
 
 	fi, err := os.Stat(inputPath)
 	if err != nil {
 		return err
 	}
-	bar := getBar(fi.Size())
+	bar := progress.NewBar(fi.Size(), "Шифрую файл...")
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -289,7 +232,7 @@ func (r *FileSystemRepository) DecryptFile(inputName, outputPath, password strin
 	if err != nil {
 		return err
 	}
-	bar := getBar(fi.Size())
+	bar := progress.NewBar(fi.Size(), "Дешифрую файл...")
 
 	// Открываем зашифрованный файл
 	inputFile, err := os.Open(inputPath)
@@ -375,31 +318,4 @@ func deriveKey(password string) []byte {
 	}
 
 	return key
-}
-
-func getBar(fileSize int64) *progressbar.ProgressBar {
-	width := 50
-	if runtime.GOOS == "windows" {
-		width = 30
-	}
-
-	themeOption := progressbar.OptionSetTheme(progressbar.Theme{
-		Saucer:        "=",
-		SaucerHead:    ">",
-		SaucerPadding: " ",
-		BarStart:      "[",
-		BarEnd:        "]",
-	})
-
-	return progressbar.NewOptions64(
-		fileSize,
-		progressbar.OptionSetDescription("Шифрую файл..."),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(width),
-		progressbar.OptionOnCompletion(func() {
-			fmt.Fprint(os.Stderr, "\n")
-		}),
-		themeOption,
-	)
 }

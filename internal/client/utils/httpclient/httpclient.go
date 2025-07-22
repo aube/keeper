@@ -2,13 +2,19 @@ package httpclient
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/aube/keeper/internal/client/utils/progress"
+	"github.com/schollz/progressbar/v3"
 )
 
 // HTTPClient представляет наш клиент
@@ -139,4 +145,98 @@ func (c *HTTPClient) DownloadFile(fileURL, outputPath string) error {
 	// Копируем данные в файл
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+// UploadFileWithProgress отправляет файл с отображением прогресса
+func (c *HTTPClient) UploadFile(ctx context.Context, endpoint string, filePath string, formFields map[string]string) ([]byte, error) {
+	// Получаем информацию о файле для прогресс-бара
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения информации о файле: %w", err)
+	}
+
+	// Создаем pipe для отслеживания прогресса
+	pr, pw := io.Pipe()
+	defer pr.Close()
+
+	// Создаем прогресс-бар
+	bar := progress.NewBar(fi.Size(), "Отправка файла...")
+
+	// Горутина для записи файла в pipe с отслеживанием прогресса
+	go func() {
+		defer pw.Close()
+
+		// Открываем файл
+		file, err := os.Open(filePath)
+		if err != nil {
+			pw.CloseWithError(fmt.Errorf("ошибка открытия файла: %w", err))
+			return
+		}
+		defer file.Close()
+
+		// Копируем файл в pipe с отслеживанием прогресса
+		reader := progressbar.NewReader(file, bar)
+		_, err = io.Copy(pw, &reader)
+		if err != nil {
+			pw.CloseWithError(fmt.Errorf("ошибка копирования файла: %w", err))
+			return
+		}
+	}()
+
+	// Создаем multipart writer
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Добавляем файл
+	part, err := writer.CreateFormFile("file", filepath.Base(filePath))
+	if err != nil {
+		return nil, fmt.Errorf("ошибка создания части файла: %w", err)
+	}
+
+	// Копируем данные из pipe в multipart
+	if _, err = io.Copy(part, pr); err != nil {
+		return nil, fmt.Errorf("ошибка копирования данных: %w", err)
+	}
+
+	// Добавляем текстовые поля
+	for key, value := range formFields {
+		_ = writer.WriteField(key, value)
+	}
+
+	// Закрываем writer
+	if err = writer.Close(); err != nil {
+		return nil, fmt.Errorf("ошибка закрытия writer: %w", err)
+	}
+
+	// Создаем запрос
+	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+endpoint, body)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка создания запроса: %w", err)
+	}
+
+	// Устанавливаем заголовки
+	for key, value := range c.headers {
+		req.Header.Set(key, value)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Выполняем запрос
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Проверяем статус код
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("неожиданный статус код: %d", resp.StatusCode)
+	}
+
+	// Читаем ответ
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения ответа: %w", err)
+	}
+
+	return responseBody, nil
 }

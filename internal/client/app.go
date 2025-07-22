@@ -13,19 +13,23 @@ import (
 	"github.com/aube/keeper/internal/client/modules/encrypt"
 	"github.com/aube/keeper/internal/client/modules/login"
 	"github.com/aube/keeper/internal/client/modules/register"
+	"github.com/aube/keeper/internal/client/modules/upload"
 )
 
 type FileRepository interface {
 	Save(ctx context.Context, filename string, data io.Reader) error
 	FindAll(ctx context.Context) (*entities.Files, error)
 	Delete(ctx context.Context, uuid string) error
-	GetFileContent(ctx context.Context, uuid string) (io.ReadCloser, error)
+	GetFile(ctx context.Context, uuid string) (io.ReadCloser, error)
+	GetFileContent(ctx context.Context, uuid string) (string, error)
 	DecryptFile(inputName, outputPath, password string) error
 	EncryptFile(inputPath, outputName, password string) error
+	GetPath(filename string) string
 }
 
 type TokenRepository interface {
-	FileRepository
+	Save(ctx context.Context, filename string, data io.Reader) error
+	GetFileContent(ctx context.Context, filename string) (string, error)
 }
 
 type HTTPClient interface {
@@ -33,12 +37,18 @@ type HTTPClient interface {
 	Get(endpoint string, queryParams map[string]string) ([]byte, error)
 	Post(endpoint string, body any) ([]byte, error)
 	DownloadFile(fileURL, outputPath string) error
+	UploadFile(ctx context.Context, endpoint string, filePath string, formFields map[string]string) ([]byte, error)
 }
 
 func Run(command string, cfg config.EnvConfig, filesRepo FileRepository, tokensRepo TokenRepository, http HTTPClient) error {
 	ctx := context.Background()
 
 	var err error
+
+	token, _ := tokensRepo.GetFileContent(ctx, cfg.Username)
+	if token != "" {
+		http.SetHeader("Authorization", "Bearer "+string(token))
+	}
 
 	switch command {
 	case "register":
@@ -47,9 +57,9 @@ func Run(command string, cfg config.EnvConfig, filesRepo FileRepository, tokensR
 		err = login.Run(cfg, tokensRepo, http)
 	case "encrypt":
 		err = encrypt.Run(cfg, filesRepo)
-		// if (err != nil) {
-		// 	upload(cfg, filesRepo, http)
-		// }
+		if err == nil {
+			err = upload.Run(filesRepo, cfg.Output, http)
+		}
 	case "decrypt":
 		err = decrypt.Run(cfg, filesRepo)
 	case "sync":
