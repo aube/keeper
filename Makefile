@@ -1,6 +1,22 @@
 .PHONY: run
 run:
 	go run ./cmd/client login 123
+	
+.PHONY: login
+login:
+	go run ./cmd/client login -u test -p password
+
+.PHONY: register
+register:
+	go run ./cmd/client register -u test -p password -e e@mail.ee
+
+.PHONY: encrypt
+encrypt:
+	go run ./cmd/client encrypt -u test -p password -i /home/aube/Videos/js-middle.mkv -o js-middle.bin
+
+.PHONY: decrypt
+decrypt:
+	go run ./cmd/client decrypt -u test -p password -o /home/aube/Videos/js-middle2.mkv -i js-middle.bin
 
 .PHONY: build
 build:

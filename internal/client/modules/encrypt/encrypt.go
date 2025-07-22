@@ -1,11 +1,11 @@
-package login
+package encrypt
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/aube/keeper/internal/client/config"
 	"github.com/aube/keeper/internal/client/entities"
@@ -16,6 +16,7 @@ type FileRepository interface {
 	FindAll(ctx context.Context) (*entities.Files, error)
 	Delete(ctx context.Context, uuid string) error
 	GetFileContent(ctx context.Context, uuid string) (io.ReadCloser, error)
+	EncryptFile(inputPath, outputName, password string) error
 }
 
 type HTTPClient interface {
@@ -29,25 +30,22 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-func Run(cfg config.EnvConfig, repo FileRepository, http HTTPClient) error {
+func Run(cfg config.EnvConfig, repo FileRepository) error {
+	inputPath := cfg.Input
+	outputName := cfg.Output
+	password := cfg.Password
 
-	postData := map[string]interface{}{
-		"username": cfg.Username,
-		"password": cfg.Password,
+	if password == "" {
+		return errors.New("empty password")
+	}
+	if inputPath == "" {
+		return errors.New("empty input file path")
+	}
+	if outputName == "" {
+		return errors.New("empty output file name")
 	}
 
-	response, err := http.Post("/login", postData)
-	if err != nil {
-		return err
-	}
-
-	token, err := ExtractToken(response)
-	if err != nil {
-		return err
-	}
-
-	ctx := context.Background()
-	err = repo.Save(ctx, cfg.Username, strings.NewReader(token))
+	err := repo.EncryptFile(inputPath, outputName, password)
 	if err != nil {
 		return err
 	}
