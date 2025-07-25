@@ -116,9 +116,9 @@ func (c *HTTPClient) Post(endpoint string, body interface{}) ([]byte, error) {
 }
 
 // DownloadFile скачивает файл по URL
-func (c *HTTPClient) DownloadFile(fileURL, outputPath string) error {
+func (c *HTTPClient) DownloadFile(endpoint, outputPath string) error {
 	// Создаем запрос
-	req, err := http.NewRequest("GET", fileURL, nil)
+	req, err := http.NewRequest("GET", c.baseURL+endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -134,6 +134,11 @@ func (c *HTTPClient) DownloadFile(fileURL, outputPath string) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	// Проверяем статус код
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
 
 	// Создаем файл
 	out, err := os.Create(outputPath)

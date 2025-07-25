@@ -18,6 +18,10 @@ encrypt:
 decrypt:
 	go run ./cmd/client decrypt -u test -p password -o /home/aube/Videos/js-middle2.mkv -i js-middle.bin
 
+.PHONY: download
+download:
+	go run ./cmd/client download -u test -i js-middle.bin
+
 .PHONY: build
 build:
 	go build -ldflags "                                     \

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 
 	"github.com/aube/keeper/internal/client"
@@ -21,7 +23,7 @@ var (
 )
 
 func main() {
-	// ctx := context.Background()
+	ctx := context.Background()
 
 	fmt.Printf("Build version: %s\n", common.StringOrNA(buildVersion))
 	fmt.Printf("Build date: %s\n", common.StringOrNA(buildTime))
@@ -58,13 +60,41 @@ func main() {
 	// инициализация http-клиента
 	http := httpclient.NewHTTPClient(cfg.ServerAddress)
 
-	// запуск приложения
-	client.Run(
-		command,
+	app := client.NewApp(
 		cfg,
 		filesRepo,
 		tokensRepo,
 		http,
 	)
 
+	switch command {
+	case "register":
+		err = app.Register()
+	case "login":
+		err = app.Login()
+	case "encrypt":
+		err = app.Encrypt()
+		if err == nil {
+			err = app.Upload()
+		}
+	case "decrypt":
+		err = app.Decrypt()
+	case "download":
+		err = app.Download()
+	case "sync":
+		// files4download, files4deletion, err = sync.Run(cfg, tokensRepo, filesRepo, http)
+	case "":
+	}
+
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		ctx.Done()
+		os.Exit(1)
+	}()
 }

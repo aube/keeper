@@ -10,6 +10,7 @@ import (
 	"github.com/aube/keeper/internal/client/config"
 	"github.com/aube/keeper/internal/client/entities"
 	"github.com/aube/keeper/internal/client/modules/decrypt"
+	"github.com/aube/keeper/internal/client/modules/download"
 	"github.com/aube/keeper/internal/client/modules/encrypt"
 	"github.com/aube/keeper/internal/client/modules/login"
 	"github.com/aube/keeper/internal/client/modules/register"
@@ -40,6 +41,45 @@ type HTTPClient interface {
 	UploadFile(ctx context.Context, endpoint string, filePath string, formFields map[string]string) ([]byte, error)
 }
 
+type App struct {
+	filesRepo  FileRepository
+	tokensRepo TokenRepository
+	http       HTTPClient
+	cfg        config.EnvConfig
+}
+
+func NewApp(cfg config.EnvConfig, filesRepo FileRepository, tokensRepo TokenRepository, http HTTPClient) *App {
+	return &App{
+		filesRepo:  filesRepo,
+		tokensRepo: tokensRepo,
+		http:       http,
+		cfg:        cfg,
+	}
+}
+
+func (a *App) Register() error {
+	return register.Run(a.cfg, a.http)
+}
+func (a *App) Login() error {
+	return login.Run(a.cfg, a.tokensRepo, a.http)
+}
+func (a *App) Encrypt() error {
+	return encrypt.Run(a.cfg, a.filesRepo)
+}
+func (a *App) Decrypt() error {
+	return decrypt.Run(a.cfg, a.filesRepo)
+}
+func (a *App) Upload() error {
+	return upload.Run(a.filesRepo, a.cfg.Output, a.http)
+}
+func (a *App) Download() error {
+	return download.Run(a.cfg, a.filesRepo, a.http)
+}
+func (a *App) Sync() error {
+	return nil
+	// return login.Run(a.cfg, a.tokensRepo, a.http)
+}
+
 func Run(command string, cfg config.EnvConfig, filesRepo FileRepository, tokensRepo TokenRepository, http HTTPClient) error {
 	ctx := context.Background()
 
@@ -62,6 +102,8 @@ func Run(command string, cfg config.EnvConfig, filesRepo FileRepository, tokensR
 		}
 	case "decrypt":
 		err = decrypt.Run(cfg, filesRepo)
+	case "download":
+		err = download.Run(cfg, filesRepo, http)
 	case "sync":
 		// files4download, files4deletion, err = sync.Run(cfg, tokensRepo, filesRepo, http)
 	case "":
