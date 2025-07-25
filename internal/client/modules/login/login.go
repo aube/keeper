@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/aube/keeper/internal/client/config"
 )
 
 type FileRepository interface {
@@ -26,11 +24,11 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-func Run(cfg config.EnvConfig, repo FileRepository, http HTTPClient) error {
+func Run(username string, password string, repo FileRepository, http HTTPClient) error {
 
 	postData := map[string]interface{}{
-		"username": cfg.Username,
-		"password": cfg.Password,
+		"username": username,
+		"password": password,
 	}
 
 	response, err := http.Post("/login", postData)
@@ -44,7 +42,7 @@ func Run(cfg config.EnvConfig, repo FileRepository, http HTTPClient) error {
 	}
 
 	ctx := context.Background()
-	err = repo.Save(ctx, cfg.Username, strings.NewReader(token))
+	err = repo.Save(ctx, username, strings.NewReader(token))
 	if err != nil {
 		return err
 	}

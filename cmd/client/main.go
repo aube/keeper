@@ -14,6 +14,7 @@ import (
 	"github.com/aube/keeper/internal/client/utils/httpclient"
 	"github.com/aube/keeper/internal/client/utils/logger"
 	"github.com/aube/keeper/internal/common"
+	"github.com/aube/keeper/internal/ui"
 )
 
 var (
@@ -29,10 +30,10 @@ func main() {
 	fmt.Printf("Build date: %s\n", common.StringOrNA(buildTime))
 	fmt.Printf("Build commit: %s\n\n", common.StringOrNA(buildCommit))
 
-	if len(os.Args) == 1 {
-		log.Fatalf("command not found")
+	var command string
+	if len(os.Args) > 1 {
+		command = os.Args[1]
 	}
-	command := os.Args[1]
 
 	// конфиг
 	cfg := config.NewConfig()
@@ -69,21 +70,22 @@ func main() {
 
 	switch command {
 	case "register":
-		err = app.Register()
+		err = app.Register(cfg.Username, cfg.Password, cfg.Email)
 	case "login":
-		err = app.Login()
+		err = app.Login(cfg.Username, cfg.Password)
 	case "encrypt":
-		err = app.Encrypt()
+		err = app.Encrypt(cfg.Password, cfg.Input, cfg.Output)
 		if err == nil {
-			err = app.Upload()
+			err = app.Upload(cfg.Output)
 		}
 	case "decrypt":
-		err = app.Decrypt()
+		err = app.Decrypt(cfg.Password, cfg.Input, cfg.Output)
 	case "download":
-		err = app.Download()
+		err = app.Download(cfg.Input)
 	case "sync":
 		// files4download, files4deletion, err = sync.Run(cfg, tokensRepo, filesRepo, http)
 	case "":
+		ui.NewUI(app)
 	}
 
 	if err != nil {

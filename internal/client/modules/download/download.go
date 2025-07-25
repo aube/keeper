@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aube/keeper/internal/client/config"
 	"github.com/aube/keeper/internal/client/entities"
 )
 
@@ -30,11 +29,11 @@ type UploadResponse struct {
 	UUID string `json:"uuid"`
 }
 
-func Run(cfg config.EnvConfig, repo FileRepository, http HTTPClient) error {
+func Run(inputName string, repo FileRepository, http HTTPClient) error {
 	// ctx := context.Background()
 
-	url := "/file?name=" + cfg.Input
-	filepath := repo.GetPath(cfg.Input)
+	url := "/file?name=" + inputName
+	filepath := repo.GetPath(inputName)
 
 	err := http.DownloadFile(url, filepath)
 	if err != nil {

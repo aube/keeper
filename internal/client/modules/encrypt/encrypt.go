@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aube/keeper/internal/client/config"
 	"github.com/aube/keeper/internal/client/entities"
 )
 
@@ -30,11 +29,7 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-func Run(cfg config.EnvConfig, repo FileRepository) error {
-	inputPath := cfg.Input
-	outputName := cfg.Output
-	password := cfg.Password
-
+func Run(password string, inputPath string, outputName string, repo FileRepository) error {
 	if password == "" {
 		return errors.New("empty password")
 	}
