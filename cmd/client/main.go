@@ -31,7 +31,7 @@ func main() {
 	fmt.Printf("Build commit: %s\n\n", common.StringOrNA(buildCommit))
 
 	var command string
-	if len(os.Args) > 1 {
+	if len(os.Args) > 0 {
 		command = os.Args[1]
 	}
 
@@ -68,6 +68,7 @@ func main() {
 		http,
 	)
 
+	// Запускаем команду из CLI или стартуем UI
 	switch command {
 	case "register":
 		err = app.Register(cfg.Username, cfg.Password, cfg.Email)
@@ -84,8 +85,8 @@ func main() {
 		err = app.Download(cfg.Input)
 	case "sync":
 		// files4download, files4deletion, err = sync.Run(cfg, tokensRepo, filesRepo, http)
-	case "":
-		ui.NewUI(app)
+	default:
+		err = ui.NewUI(app)
 	}
 
 	if err != nil {
