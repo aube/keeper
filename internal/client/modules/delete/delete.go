@@ -18,39 +18,28 @@ type FileRepository interface {
 }
 
 type HTTPClient interface {
-	SetHeader(key, value string)
-	Get(endpoint string, queryParams map[string]string) ([]byte, error)
-	Post(endpoint string, body any) ([]byte, error)
-	DownloadFile(fileURL, outputPath string) error
-	UploadFile(ctx context.Context, endpoint string, filePath string, formFields map[string]string) ([]byte, error)
+	Delete(filename string) error
 }
 
 type UploadResponse struct {
 	UUID string `json:"uuid"`
 }
 
-func Run(repo FileRepository, filename string, category string, http HTTPClient) error {
+func Run(repo FileRepository, filename string, http HTTPClient) error {
 
 	ctx := context.Background()
 
-	filepath := repo.GetPath(filename)
-
-	postData := map[string]string{
-		"description": "ololo alala",
-		"category":    category,
-	}
-
-	responce, err := http.UploadFile(ctx, "/upload", filepath, postData)
+	err := http.Delete("/delete?name" + filename)
 	if err != nil {
 		return err
 	}
 
-	UUID, err := ExtractUUID(responce)
+	err = repo.Delete(ctx, filename)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Файл загружен под именем:", UUID)
+	fmt.Println("Файл удалён")
 
 	return nil
 }

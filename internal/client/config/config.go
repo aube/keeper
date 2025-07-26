@@ -21,6 +21,9 @@ type EnvConfig struct {
 	LogLevel              string `mapstructure:"log_level" env:"LOG_LEVEL"`
 	Input                 string `mapstructure:"input"`
 	Output                string `mapstructure:"output"`
+	Number                string `mapstructure:"number"`
+	Date                  string `mapstructure:"date"`
+	CVV                   string `mapstructure:"cvv"`
 }
 
 // config() initializes and returns the application configuration.
@@ -52,6 +55,9 @@ func NewConfig() EnvConfig {
 	pflag.StringP("server_address", "a", "", "Server address to listen on")
 	pflag.StringP("input", "i", "", "Input file (only name for decription)")
 	pflag.StringP("output", "o", "", "Output file (only name for encription)")
+	pflag.StringP("number", "n", "", "Bank card number")
+	pflag.StringP("date", "d", "", "Bank card date")
+	pflag.StringP("cvv", "v", "", "Bank card cvv")
 	pflag.Parse()
 
 	viper.BindPFlags(pflag.CommandLine) // Flags override everything

@@ -11,9 +11,9 @@ import (
 	"github.com/aube/keeper/internal/client"
 	"github.com/aube/keeper/internal/client/config"
 	"github.com/aube/keeper/internal/client/infrastructure/filestore"
+	"github.com/aube/keeper/internal/client/utils/helpers"
 	"github.com/aube/keeper/internal/client/utils/httpclient"
 	"github.com/aube/keeper/internal/client/utils/logger"
-	"github.com/aube/keeper/internal/common"
 	"github.com/aube/keeper/internal/ui"
 )
 
@@ -26,9 +26,9 @@ var (
 func main() {
 	ctx := context.Background()
 
-	fmt.Printf("Build version: %s\n", common.StringOrNA(buildVersion))
-	fmt.Printf("Build date: %s\n", common.StringOrNA(buildTime))
-	fmt.Printf("Build commit: %s\n\n", common.StringOrNA(buildCommit))
+	fmt.Printf("Build version: %s\n", helpers.StringOrNA(buildVersion))
+	fmt.Printf("Build date: %s\n", helpers.StringOrNA(buildTime))
+	fmt.Printf("Build commit: %s\n\n", helpers.StringOrNA(buildCommit))
 
 	var command string
 	if len(os.Args) > 0 {
@@ -76,9 +76,8 @@ func main() {
 		err = app.Login(cfg.Username, cfg.Password)
 	case "encrypt":
 		err = app.Encrypt(cfg.Password, cfg.Input, cfg.Output)
-		if err == nil {
-			err = app.Upload(cfg.Output)
-		}
+	case "card":
+		err = app.Card(cfg.Password, cfg.Number, cfg.Date, cfg.CVV)
 	case "decrypt":
 		err = app.Decrypt(cfg.Password, cfg.Input, cfg.Output)
 	case "download":

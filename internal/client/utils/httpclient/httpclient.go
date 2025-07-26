@@ -111,6 +111,10 @@ func (c *HTTPClient) Post(endpoint string, body interface{}) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
 	// Читаем тело ответа
 	return io.ReadAll(resp.Body)
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/aube/keeper/internal/client/config"
 	"github.com/aube/keeper/internal/client/entities"
+	"github.com/aube/keeper/internal/client/modules/card"
 	"github.com/aube/keeper/internal/client/modules/decrypt"
 	"github.com/aube/keeper/internal/client/modules/download"
 	"github.com/aube/keeper/internal/client/modules/encrypt"
@@ -45,6 +46,10 @@ type KeeperApp interface {
 	Decrypt(Password string, Input string, Output string) error
 	Upload(Output string) error
 	Download(Input string) error
+	Delete(Input string) error
+	Card(Number string, Date string, CVV string, Password string) (string, error)
+	Deletecard(Input string) error
+	Sync() error
 }
 
 type App struct {
@@ -70,18 +75,34 @@ func (a *App) Login(Username string, Password string) error {
 	return login.Run(Username, Password, a.tokensRepo, a.http)
 }
 func (a *App) Encrypt(Password string, Input string, Output string) error {
-	return encrypt.Run(Password, Input, Output, a.filesRepo)
+	err := encrypt.Run(Password, Input, Output, a.filesRepo)
+	if err == nil {
+		err = upload.Run(a.filesRepo, Output, "", a.http)
+	}
+	return err
 }
 func (a *App) Decrypt(Password string, Input string, Output string) error {
 	return decrypt.Run(a.cfg.Password, a.cfg.Input, a.cfg.Output, a.filesRepo)
 }
-func (a *App) Upload(Output string) error {
-	return upload.Run(a.filesRepo, Output, a.http)
+func (a *App) Upload(Output string, Category string) error {
+	return upload.Run(a.filesRepo, Output, Category, a.http)
 }
 func (a *App) Download(Input string) error {
 	return download.Run(Input, a.filesRepo, a.http)
 }
+func (a *App) Card(Number string, Date string, CVV string, Password string) error {
+	filename, err := card.Run(Number, Date, CVV, Password, a.filesRepo, a.http)
+	if err == nil {
+		err = upload.Run(a.filesRepo, filename, "card", a.http)
+	}
+	return err
+}
+func (a *App) Deletecard(Input string) error {
+	return nil
+}
+func (a *App) Delete(Input string) error {
+	return download.Run(Input, a.filesRepo, a.http)
+}
 func (a *App) Sync() error {
 	return nil
-	// return login.Run(a.cfg, a.tokensRepo, a.http)
 }

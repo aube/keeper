@@ -5,7 +5,6 @@ go 1.23.0
 toolchain go1.24.3
 
 require (
-	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.6
 	github.com/charmbracelet/lipgloss v1.1.0
