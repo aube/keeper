@@ -31,7 +31,7 @@ func main() {
 	fmt.Printf("Build commit: %s\n\n", helpers.StringOrNA(buildCommit))
 
 	var command string
-	if len(os.Args) > 0 {
+	if len(os.Args) > 1 {
 		command = os.Args[1]
 	}
 

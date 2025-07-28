@@ -26,3 +26,4 @@ vendor/
 # url-shortener templates
 _hashes
 
+cmd/client/keeper_*
