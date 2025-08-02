@@ -15,6 +15,12 @@ type FileRepository interface {
 	Delete(ctx context.Context, uuid string) error
 	GetFileContent(ctx context.Context, uuid string) (string, error)
 	GetPath(filename string) string
+	Exists(filename string) bool
+}
+
+type TokenRepository interface {
+	Save(ctx context.Context, filename string, data io.Reader) error
+	GetFileContent(ctx context.Context, uuid string) (string, error)
 }
 
 type HTTPClient interface {
@@ -25,40 +31,88 @@ type HTTPClient interface {
 	UploadFile(ctx context.Context, endpoint string, filePath string, formFields map[string]string) ([]byte, error)
 }
 
-type UploadResponse struct {
-	UUID string `json:"uuid"`
+type Response struct {
+	Pagination Pagination `json:"pagination"`
+	Rows       []Row      `json:"rows"`
 }
 
-func Run(repo FileRepository, filename string, http HTTPClient) error {
+type Pagination struct {
+	Size  int `json:"size"`
+	Page  int `json:"page"`
+	Total int `json:"total"`
+}
+
+type Row struct {
+	UUID        string `json:"uuid"`
+	Name        string `json:"name"`
+	Category    string `json:"category"`
+	Size        int    `json:"size"`
+	ContentType string `json:"content_type"`
+	Description string `json:"description"`
+}
+
+func Run(fileRepo FileRepository, syncRepo TokenRepository, http HTTPClient) error {
 
 	ctx := context.Background()
 
-	filepath := repo.GetPath(filename)
+	params := make(map[string]string)
+	params["deleted"] = "true"
 
-	postData := map[string]string{
-		"description": "ololo alala",
-	}
-
-	responce, err := http.UploadFile(ctx, "/upload", filepath, postData)
+	deletedFilesResponse, err := http.Get("/uploads", params)
 	if err != nil {
 		return err
 	}
 
-	UUID, err := ExtractUUID(responce)
+	// local delete files marks deleted on server
+	deletedFiles, err := ExtractRows(deletedFilesResponse)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Файл загружен под именем:", UUID)
+	for _, row := range deletedFiles {
+		if !fileRepo.Exists(row.Name) {
+			continue
+		}
+		err = fileRepo.Delete(ctx, row.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	// download new files
+	params["deleted"] = "false"
+	newFilesResponse, err := http.Get("/uploads", params)
+	if err != nil {
+		return err
+	}
+	newFiles, err := ExtractRows(newFilesResponse)
+	if err != nil {
+		return err
+	}
+
+	for _, row := range newFiles {
+		if fileRepo.Exists(row.Name) {
+			continue
+		}
+		url := "/file?name=" + row.Name
+		filepath := fileRepo.GetPath(row.Name)
+
+		err := http.DownloadFile(url, filepath)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-func ExtractUUID(responseBytes []byte) (string, error) {
-	var uploadResp UploadResponse
-	if err := json.Unmarshal(responseBytes, &uploadResp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal upload response: %v", err)
+func ExtractRows(responseBytes []byte) ([]Row, error) {
+	var response Response
+	err := json.Unmarshal([]byte(responseBytes), &response)
+	if err != nil {
+		fmt.Println("Error unmarshaling JSON:", err)
+		return nil, err
 	}
 
-	return uploadResp.UUID, nil
+	return response.Rows, nil
 }

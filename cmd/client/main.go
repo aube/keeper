@@ -54,6 +54,9 @@ func main() {
 	tokensStoragePath := filepath.Join(cfg.StoragePath, "tokens")
 	tokensRepo, err := filestore.NewFileSystemRepository(tokensStoragePath)
 
+	syncsStoragePath := filepath.Join(cfg.StoragePath, "sync")
+	syncsRepo, err := filestore.NewFileSystemRepository(syncsStoragePath)
+
 	if err != nil {
 		log.Fatalf("Failed to initialize tokens repository: %v", err)
 	}
@@ -65,6 +68,7 @@ func main() {
 		cfg,
 		filesRepo,
 		tokensRepo,
+		syncsRepo,
 		http,
 	)
 
@@ -83,7 +87,7 @@ func main() {
 	case "download":
 		err = app.Download(cfg.Input)
 	case "sync":
-		// files4download, files4deletion, err = sync.Run(cfg, tokensRepo, filesRepo, http)
+		err = app.Sync()
 	default:
 		err = ui.NewUI(app)
 	}

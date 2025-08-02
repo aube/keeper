@@ -45,10 +45,6 @@ func initialModel(apis map[string]ScreenAPI) model {
 	// Добавляем экран меню
 	m.screens["menu"] = NewMenuScreen()
 
-	// settingsAPI := apis["settings"].(SettingsScreenAPI)
-	// mainAPI := apis["main"].(RegisterScreenAPI)
-	// fmt.Println(mainAPI)
-
 	// // Инициализация остальных экранов
 	if mainAPI, ok := apis["register"].(RegisterScreenAPI); ok {
 		m.screens["register"] = NewRegisterScreen(mainAPI)

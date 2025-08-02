@@ -20,7 +20,11 @@ decrypt:
 
 .PHONY: download
 download:
-	go run ./cmd/client download -u test -i js-middle.bin
+	go run ./cmd/client download -u test -i js-middle.bin'
+
+.PHONY: sync
+sync:
+	go run ./cmd/client sync -u test
 
 .PHONY: build
 build:

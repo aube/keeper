@@ -93,6 +93,16 @@ func (r *FileSystemRepository) GetFile(ctx context.Context, filename string) (io
 	return os.Open(filePath)
 }
 
+func (r *FileSystemRepository) Exists(filename string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	filePath := filepath.Join(r.storagePath, filename)
+
+	_, err := os.Stat(filePath)
+	return !os.IsNotExist(err)
+}
+
 func (r *FileSystemRepository) GetFileContent(ctx context.Context, filename string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

@@ -12,6 +12,7 @@ import (
 	"github.com/aube/keeper/internal/client/modules/encrypt"
 	"github.com/aube/keeper/internal/client/modules/login"
 	"github.com/aube/keeper/internal/client/modules/register"
+	"github.com/aube/keeper/internal/client/modules/sync"
 	"github.com/aube/keeper/internal/client/modules/upload"
 )
 
@@ -24,6 +25,7 @@ type FileRepository interface {
 	DecryptFile(inputName, outputPath, password string) error
 	EncryptFile(inputPath, outputName, password string) error
 	GetPath(filename string) string
+	Exists(filename string) bool
 }
 
 type TokenRepository interface {
@@ -55,14 +57,26 @@ type KeeperApp interface {
 type App struct {
 	filesRepo  FileRepository
 	tokensRepo TokenRepository
+	syncsRepo  TokenRepository
 	http       HTTPClient
 	cfg        config.EnvConfig
 }
 
-func NewApp(cfg config.EnvConfig, filesRepo FileRepository, tokensRepo TokenRepository, http HTTPClient) *App {
+func NewApp(
+	cfg config.EnvConfig,
+	filesRepo FileRepository,
+	tokensRepo TokenRepository,
+	syncsRepo TokenRepository,
+	http HTTPClient,
+) *App {
+	ctx := context.Background()
+	if token, err := tokensRepo.GetFileContent(ctx, cfg.Username); err == nil {
+		http.SetHeader("Authorization", "Bearer "+token)
+	}
 	return &App{
 		filesRepo:  filesRepo,
 		tokensRepo: tokensRepo,
+		syncsRepo:  syncsRepo,
 		http:       http,
 		cfg:        cfg,
 	}
@@ -104,5 +118,6 @@ func (a *App) Delete(Input string) error {
 	return download.Run(Input, a.filesRepo, a.http)
 }
 func (a *App) Sync() error {
-	return nil
+	// files4download, files4deletion,
+	return sync.Run(a.filesRepo, a.syncsRepo, a.http)
 }
