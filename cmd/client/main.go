@@ -87,7 +87,7 @@ func main() {
 	case "download":
 		err = app.Download(cfg.Input)
 	case "sync":
-		err = app.Sync()
+		err = app.Sync(cfg.Username)
 	default:
 		err = ui.NewUI(app)
 	}

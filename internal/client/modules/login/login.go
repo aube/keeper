@@ -10,14 +10,10 @@ import (
 
 type FileRepository interface {
 	Save(ctx context.Context, filename string, data io.Reader) error
-	GetFileContent(ctx context.Context, uuid string) (string, error)
 }
 
 type HTTPClient interface {
-	SetHeader(key, value string)
-	Get(endpoint string, queryParams map[string]string) ([]byte, error)
 	Post(endpoint string, body any) ([]byte, error)
-	DownloadFile(fileURL, outputPath string) error
 }
 
 type LoginResponse struct {

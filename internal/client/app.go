@@ -51,7 +51,7 @@ type KeeperApp interface {
 	Delete(Input string) error
 	Card(Number string, Date string, CVV string, Password string) (string, error)
 	Deletecard(Input string) error
-	Sync() error
+	Sync(Username string) error
 }
 
 type App struct {
@@ -117,7 +117,7 @@ func (a *App) Deletecard(Input string) error {
 func (a *App) Delete(Input string) error {
 	return download.Run(Input, a.filesRepo, a.http)
 }
-func (a *App) Sync() error {
+func (a *App) Sync(Username string) error {
 	// files4download, files4deletion,
-	return sync.Run(a.filesRepo, a.syncsRepo, a.http)
+	return sync.Run(Username, a.filesRepo, a.syncsRepo, a.http)
 }

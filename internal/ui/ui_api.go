@@ -10,7 +10,7 @@ type KeeperApp interface {
 	Delete(Input string) error
 	Card(Number string, Date string, CVV string, Password string) error
 	Deletecard(Input string) error
-	Sync() error
+	Sync(Username string) error
 }
 
 type ScreenAPI interface {

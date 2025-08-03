@@ -4,17 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-
-	"github.com/aube/keeper/internal/client/entities"
 )
 
 type FileRepository interface {
-	Save(ctx context.Context, filename string, data io.Reader) error
-	FindAll(ctx context.Context) (*entities.Files, error)
 	Delete(ctx context.Context, uuid string) error
-	GetFileContent(ctx context.Context, uuid string) (string, error)
-	GetPath(filename string) string
 }
 
 type HTTPClient interface {

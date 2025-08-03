@@ -5,15 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/aube/keeper/internal/client/entities"
+	"strings"
+	"time"
 )
 
 type FileRepository interface {
-	Save(ctx context.Context, filename string, data io.Reader) error
-	FindAll(ctx context.Context) (*entities.Files, error)
 	Delete(ctx context.Context, uuid string) error
-	GetFileContent(ctx context.Context, uuid string) (string, error)
 	GetPath(filename string) string
 	Exists(filename string) bool
 }
@@ -24,11 +21,8 @@ type TokenRepository interface {
 }
 
 type HTTPClient interface {
-	SetHeader(key, value string)
 	Get(endpoint string, queryParams map[string]string) ([]byte, error)
-	Post(endpoint string, body any) ([]byte, error)
 	DownloadFile(fileURL, outputPath string) error
-	UploadFile(ctx context.Context, endpoint string, filePath string, formFields map[string]string) ([]byte, error)
 }
 
 type Response struct {
@@ -51,12 +45,20 @@ type Row struct {
 	Description string `json:"description"`
 }
 
-func Run(fileRepo FileRepository, syncRepo TokenRepository, http HTTPClient) error {
+func Run(username string, fileRepo FileRepository, syncRepo TokenRepository, http HTTPClient) error {
 
 	ctx := context.Background()
+	now := time.Now()
+	updatedAt := now.AddDate(-1, 0, 0)
+
+	prevSync, err := syncRepo.GetFileContent(ctx, username)
+	if err == nil {
+		updatedAt, _ = time.Parse(time.RFC3339, prevSync)
+	}
 
 	params := make(map[string]string)
 	params["deleted"] = "true"
+	params["uploaded_at"] = updatedAt.Format("2006-01-02")
 
 	deletedFilesResponse, err := http.Get("/uploads", params)
 	if err != nil {
@@ -101,6 +103,11 @@ func Run(fileRepo FileRepository, syncRepo TokenRepository, http HTTPClient) err
 		if err != nil {
 			return err
 		}
+	}
+
+	err = syncRepo.Save(ctx, username, strings.NewReader(now.Format("2006-01-02")))
+	if err != nil {
+		return err
 	}
 
 	return nil
